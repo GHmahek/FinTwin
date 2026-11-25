@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FinTwin · your money's weather report</title>
+<meta name="description" content="FinTwin turns bank statements into a plain-language forecast: a health score, spending, anomalies and an AI money coach.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='9' fill='%23F2A33A'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="assets/fonts/fonts.css">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to dashboard</a>
+
+<header class="nav-wrap">
+  <nav class="nav" aria-label="Main">
+    <a class="brand" href="#top" aria-label="FinTwin home">
+      <svg viewBox="0 0 32 32" width="26" height="26" aria-hidden="true"><circle cx="16" cy="16" r="7" fill="var(--sun)"/><g stroke="var(--sun)" stroke-width="2" stroke-linecap="round"><path d="M16 3v3M16 26v3M3 16h3M26 16h3M6.8 6.8l2.1 2.1M23.1 23.1l2.1 2.1M25.2 6.8l-2.1 2.1M8.9 23.1l-2.1 2.1"/></g></svg>
+      <span>FinTwin</span>
+    </a>
+    <div class="seg" role="tablist" aria-label="Data source">
+      <button id="tabExplore" class="seg-btn active" role="tab" type="button">Sample data</button>
+      <button id="tabMine" class="seg-btn" role="tab" type="button">My money</button>
+    </div>
+    <button class="btn btn-primary" type="button" data-open-modal="add">Add money</button>
+  </nav>
+</header>
+
+<main id="main">
+  <!-- ======= sky / hero ======= -->
+  <section class="sky" id="top">
+    <div class="sky-copy">
+      <p class="kicker" id="heroKicker">Platform report</p>
+      <h1 id="heroTitle">Clear skies for the whole platform</h1>
+      <p class="narrative" id="heroNarrative"></p>
+      <div class="controls" id="exploreControls">
+        <label class="field-inline">
+          <span class="sr-only">Choose whose money to view</span>
+          <select id="userSelect"></select>
+        </label>
+        <button class="btn btn-ghost" id="randomBtn" type="button">Pick someone at random</button>
+        <button class="btn btn-ghost" id="overviewBtn" type="button" style="display:none">Back to everyone</button>
+      </div>
+      <p class="source-note" id="sourceNote"></p>
+    </div>
+
+    <figure class="scene" aria-label="Health score shown as a sky">
+      <svg id="sceneSvg" viewBox="0 0 420 300" role="img" aria-labelledby="sceneTitle">
+        <title id="sceneTitle">Financial health score</title>
+        <defs>
+          <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop id="skyTop" offset="0" stop-color="#CFE6F7"/>
+            <stop id="skyBottom" offset="1" stop-color="#F6F1E4"/>
+          </linearGradient>
+          <radialGradient id="sunGlow">
+            <stop offset="0" stop-color="#FFD27A" stop-opacity=".75"/>
+            <stop offset="1" stop-color="#FFD27A" stop-opacity="0"/>
+          </radialGradient>
+        </defs>
+        <rect width="420" height="300" rx="28" fill="url(#skyGrad)"/>
+        <g id="sun" style="transform:translate(250px,150px)">
+          <circle r="96" fill="url(#sunGlow)"/>
+          <circle r="30" fill="var(--sun)"/>
+        </g>
+        <g id="clouds" fill="#fff">
+          <g class="cloud c1"><ellipse cx="96" cy="108" rx="52" ry="17"/><ellipse cx="124" cy="96" rx="30" ry="18"/><ellipse cx="72" cy="98" rx="24" ry="14"/></g>
+          <g class="cloud c2"><ellipse cx="318" cy="150" rx="58" ry="18"/><ellipse cx="344" cy="136" rx="30" ry="18"/><ellipse cx="290" cy="140" rx="26" ry="14"/></g>
+          <g class="cloud c3"><ellipse cx="190" cy="176" rx="66" ry="19"/><ellipse cx="220" cy="162" rx="34" ry="19"/><ellipse cx="160" cy="166" rx="28" ry="15"/></g>
+        </g>
+        <path d="M0 252 Q110 226 210 244 T420 236 V300 H0Z" fill="#B9D3C7"/>
+        <path d="M0 270 Q130 250 240 268 T420 260 V300 H0Z" fill="#9CC0B1"/>
+      </svg>
+      <figcaption class="score-tag">
+        <span class="score-num num" id="gaugeNum">0</span><span class="score-of">/ 100</span>
+        <span class="score-word" id="verdict"></span>
+      </figcaption>
+    </figure>
+  </section>
+
+  <!-- ======= empty state for My money ======= -->
+  <section id="mineEmpty" class="empty hidden">
+    <h2>Nothing here yet</h2>
+    <p>Add a transaction, or import a bank statement as a PDF or CSV. You will see a preview first, and nothing is saved until you confirm it.</p>
+    <div class="row-btns">
+      <button class="btn btn-primary" type="button" data-open-modal="import">Import a statement</button>
+      <button class="btn btn-ghost" type="button" data-open-modal="add">Add one entry</button>
+      <button class="btn btn-ghost" type="button" id="sampleBtn">Try with example entries</button>
+    </div>
+  </section>
+
+  <div id="dash">
+    <!-- ======= figures ======= -->
+    <section class="strip" id="kpiGrid" aria-label="Key figures"></section>
+
+    <p class="twin-tip" id="twinTip"></p>
+
+    <!-- ======= why this score ======= -->
+    <section class="block split">
+      <div>
+        <h2 id="gaugeHeading">What shapes the score</h2>
+        <p class="sub">Four things, each scored out of 100. Savings carries the most weight.</p>
+      </div>
+      <div id="subscores" class="subscores"></div>
+    </section>
+
+    <!-- ======= trend ======= -->
+    <section class="block">
+      <div class="block-head">
+        <div>
+          <h2 id="trendHeading">Income and spending, with the next three months</h2>
+          <p class="sub">Solid lines are what happened. Dashed lines are a straight-line projection from the last 12 months.</p>
+        </div>
+        <ul class="key" aria-hidden="true"><li><i class="k-inc"></i>Income</li><li><i class="k-exp"></i>Spending</li></ul>
+      </div>
+      <div class="chart-box tall"><canvas id="trendChart" role="img" aria-label="Income and expense over time with forecast"></canvas></div>
+    </section>
+
+    <!-- ======= where it goes ======= -->
+    <section class="block two">
+      <div>
+        <h2>Where the money goes</h2>
+        <p class="sub">Spending by category, biggest first.</p>
+        <ol class="ranked" id="catList"></ol>
+      </div>
+      <div>
+        <h2>How it gets spent</h2>
+        <p class="sub">Spending by payment method.</p>
+        <ol class="ranked" id="payList"></ol>
+        <div id="citySection" class="city">
+          <h3>By city</h3>
+          <p class="sub" id="cityNote"></p>
+          <div class="chart-box short"><canvas id="cityChart" role="img" aria-label="Spending by city"></canvas></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======= anomalies ======= -->
+    <section class="block">
+      <h2>Things that look off</h2>
+      <p class="sub" id="anomGraphNote"></p>
+      <p class="summary-line" id="anomSummary"></p>
+      <div class="chart-box tall"><canvas id="anomChart" role="img" aria-label="Every transaction over time with unusual ones highlighted"></canvas></div>
+      <h3 class="list-head">Flagged transactions</h3>
+      <p class="sub" id="anomNote"></p>
+      <div id="anomalyList" class="anomaly-list"></div>
+    </section>
+
+    <!-- ======= machine learning ======= -->
+    <section class="block" id="mlSection">
+      <h2>The machine learning behind it</h2>
+      <p class="sub">Two scikit-learn experiments run in the Python pipeline on the sample data. The dashboard's own score and forecast stay rule-based so they can run offline in your browser.</p>
+      <div class="two ml-two">
+        <div>
+          <h3>Isolation Forest: a second opinion on anomalies</h3>
+          <p class="sub" id="mlIsoText"></p>
+          <div class="anomaly-list" id="mlIsoList"></div>
+        </div>
+        <div>
+          <h3>Which forecast model is most accurate?</h3>
+          <p class="sub" id="mlBtText"></p>
+          <div class="table-scroll flat"><table class="review bt"><thead><tr><th>Model</th><th class="r">Income error</th><th class="r">Spending error</th><th class="r">Average</th></tr></thead><tbody id="mlBtBody"></tbody></table></div>
+          <p class="fine" id="mlBtNote"></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======= data quality ======= -->
+    <section class="block" id="qualitySection">
+      <h2>How the data was cleaned</h2>
+      <p class="sub">The raw file arrived messy. These are the fixes made before anything was scored.</p>
+      <dl class="quality" id="qualityGrid"></dl>
+    </section>
+  </div>
+</main>
+
+<footer class="foot">
+  <p><b>FinTwin</b> · Jagran School of Computer Application · Naina Khare &amp; Mahek Agrawal</p>
+  <p id="footerMeta"></p>
+  <p class="fine">General money education, not personalised investment advice.</p>
+</footer>
+
+<!-- ======= chat ======= -->
+<button class="ask-fab" id="chatFab" type="button" aria-expanded="false" aria-controls="chatPanel">
+  <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+  Ask your Twin
+</button>
+
+<aside class="chat" id="chatPanel" aria-label="Ask your Twin">
+  <header class="chat-head">
+    <div>
+      <strong>Your Twin</strong>
+      <span class="mode-badge" id="chatMode">Rules-based answers</span>
+    </div>
+    <div class="chat-tools">
+      <button id="chatSettingsBtn" class="icon-btn" type="button" aria-expanded="false" aria-controls="aiSettings">AI settings</button>
+      <button id="chatClose" class="icon-btn" type="button" aria-label="Close chat">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <div id="aiSettings" class="ai-settings hidden">
+    <label class="toggle"><input type="checkbox" id="aiEnable"> Use AI for answers</label>
+    <label class="lbl" for="aiKey">Anthropic API key</label>
+    <input id="aiKey" type="password" autocomplete="off" spellcheck="false" placeholder="sk-ant-...">
+    <label class="lbl" for="aiModel">Model</label>
+    <select id="aiModel"></select>
+    <label class="toggle"><input type="checkbox" id="aiRemember"> Remember the key on this device</label>
+    <div class="row-btns">
+      <button class="btn btn-primary btn-sm" id="aiSaveKey" type="button">Save key</button>
+      <button class="btn btn-ghost btn-sm hidden" id="aiRemoveKey" type="button">Remove key</button>
+    </div>
+    <p class="fine" id="aiStatus"></p>
+    <details>
+      <summary>What the AI is sent</summary>
+      <p class="fine">Only this summary of the figures on screen. Never individual transactions or notes.</p>
+      <pre id="aiShared"></pre>
+    </details>
+    <p class="fine warn">The key sits in this browser, so anyone using this device can read it. A real deployment would keep it on a server.</p>
+  </div>
+
+  <div class="chat-body" id="chatBody" aria-live="polite"></div>
+  <div class="chips" id="chatChips">
+    <button class="chip" type="button">Where should I invest?</button>
+    <button class="chip" type="button">How can I save more?</button>
+    <button class="chip" type="button">Why is my score what it is?</button>
+    <button class="chip" type="button">Anything unusual?</button>
+    <button class="chip" type="button">How much did I spend on food?</button>
+    <button class="chip" type="button">Which month did I spend most?</button>
+    <button class="chip" type="button">What can you answer?</button>
+  </div>
+  <form class="chat-form" id="chatForm" autocomplete="off">
+    <button class="attach-btn" id="chatAttach" type="button" aria-label="Attach statements (PDF or CSV, several allowed)" title="Attach PDFs or CSVs">
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M20 11.5l-8.2 8.2a5 5 0 01-7-7L13 4.5a3.3 3.3 0 014.7 4.7L9.5 17.4a1.7 1.7 0 01-2.4-2.4l7.6-7.6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <input type="file" id="chatFile" class="hidden" multiple accept=".pdf,.csv,.txt,application/pdf,text/csv,text/plain">
+    <input id="chatInput" type="text" placeholder="Ask anything: food spend, loans, SIP, tax..." aria-label="Your question">
+    <button class="btn btn-primary" id="chatSend" type="submit">Send</button>
+  </form>
+</aside>
+
+<!-- ======= add / import modal ======= -->
+<div class="backdrop" id="modalBackdrop" aria-hidden="true">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <header class="modal-head">
+      <h2 id="modalTitle">Add your money</h2>
+      <button class="icon-btn" type="button" data-close-modal aria-label="Close">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </button>
+    </header>
+    <div class="seg seg-wide" role="tablist">
+      <button id="paneTabAdd" class="seg-btn active" type="button">One entry</button>
+      <button id="paneTabImport" class="seg-btn" type="button">Import a statement</button>
+    </div>
+
+    <div class="pane active" id="paneAdd">
+      <div class="seg seg-wide" role="group" aria-label="Entry type">
+        <button id="typeExpense" class="seg-btn active" type="button">Spent</button>
+        <button id="typeIncome" class="seg-btn" type="button">Earned</button>
+      </div>
+      <form id="addForm">
+        <div class="grid2">
+          <label>Date<input type="date" id="fDate" required></label>
+          <label>Amount (₹)<input type="number" id="fAmount" min="0" step="0.01" inputmode="decimal" placeholder="0" required></label>
+          <label>Category<select id="fCategory"></select></label>
+          <label>Paid by
+            <select id="fPay"><option>UPI</option><option>Card</option><option>Cash</option><option>Bank Transfer</option></select>
+          </label>
+          <label>City (optional)<input type="text" id="fCity" placeholder="e.g. Bhopal"></label>
+          <label>Note (optional)<input type="text" id="fNotes" placeholder="e.g. groceries"></label>
+        </div>
+        <button class="btn btn-primary" type="submit">Save entry</button>
+        <p class="msg" id="addMsg" role="status"></p>
+      </form>
+    </div>
+
+    <div class="pane" id="paneImport">
+      <div id="importStep1">
+        <p class="sub">Choose one or more bank statements as <b>PDF</b> or <b>CSV</b> (several at once is fine), or paste CSV rows. You will review every row before anything is saved. The file is read in this browser and never uploaded.</p>
+        <label class="drop" id="dropZone">
+          <input type="file" id="importFile" multiple accept=".pdf,.csv,.txt,application/pdf,text/csv,text/plain">
+          <span class="drop-title">Choose one or more PDFs or CSVs</span>
+          <span class="drop-hint">or drop them here. You can mix PDFs and CSVs in one go.</span>
+        </label>
+        <div id="pwBox" class="pw hidden">
+          <label for="pwInput" id="pwLabel">This PDF is password-protected. Enter its password.</label>
+          <div class="row-btns"><input id="pwInput" type="password" autocomplete="off"><button class="btn btn-primary btn-sm" id="pwBtn" type="button">Unlock</button><button class="btn btn-ghost btn-sm" id="pwSkip" type="button">Skip this file</button></div>
+        </div>
+        <details>
+          <summary>Or paste CSV rows</summary>
+          <textarea id="importText" rows="5" placeholder="date,type,category,amount,payment_mode,location,notes&#10;2026-09-01,Income,Salary,62000,Bank Transfer,,"></textarea>
+          <button class="btn btn-ghost btn-sm" id="importBtn" type="button">Preview pasted rows</button>
+        </details>
+        <ul class="file-report hidden" id="fileReport"></ul>
+        <p class="msg" id="importMsg" role="status"></p>
+      </div>
+
+      <div id="importStep2" class="hidden">
+        <p class="review-lead" id="reviewLead"></p>
+        <div class="table-scroll">
+          <table class="review">
+            <thead><tr><th><input type="checkbox" id="reviewAll" aria-label="Select all rows" checked></th><th>Date</th><th>Type</th><th>Category</th><th class="r">Amount</th><th>Note</th><th id="reviewFileTh" class="hidden">File</th></tr></thead>
+            <tbody id="reviewBody"></tbody>
+          </table>
+        </div>
+        <div class="row-btns">
+          <button class="btn btn-primary" id="reviewConfirm" type="button">Add selected rows</button>
+          <button class="btn btn-ghost" id="reviewBack" type="button">Choose other files</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="myListWrap" class="mylist hidden">
+      <h3>Your entries <button class="linklike" id="clearBtn" type="button">remove all</button></h3>
+      <div id="myList"></div>
+    </div>
+  </div>
+</div>
+
+<script src="assets/vendor/chart.umd.js"></script>
+<script src="assets/data.js"></script>
+<script src="assets/ledger.js"></script>
+<script src="assets/statement.js"></script>
+<script src="assets/ai.js"></script>
+<script src="assets/advisor.js"></script>
+<script src="assets/script.js"></script>
+</body>
+</html>
